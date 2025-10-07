@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import VaultEntryCard from '@/components/VaultEntryCard';
 import VaultEntryForm, { VaultEntryData } from '@/components/VaultEntryForm';
 import { toast } from 'sonner';
-import { Plus, Search, LogOut, Shield, Key } from 'lucide-react';
+import { Plus, Search, LogOut, Shield, Key, Download, Upload } from 'lucide-react';
 import { encryptText, decryptText, generateEncryptionKey } from '@/lib/crypto';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import TwoFactorAuthSettings from '@/components/TwoFactorAuthSettings';
+import { Badge } from '@/components/ui/badge';
 
 interface VaultEntry {
   id: string;
@@ -23,6 +24,13 @@ interface VaultEntry {
   url: string;
   notes: string;
   created_at: string;
+  tags: string[];
+}
+
+interface ExportedVaultData {
+  version: number;
+  timestamp: string;
+  entries: Omit<VaultEntry, 'encrypted_password' | 'created_at'> & { password: string };
 }
 
 export default function DashboardPage() {
@@ -37,33 +45,44 @@ export default function DashboardPage() {
   const [showMasterKeyDialog, setShowMasterKeyDialog] = useState(false);
   const [showTwoFactorSettings, setShowTwoFactorSettings] = useState(false);
   const [tempMasterKey, setTempMasterKey] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
-    const storedMasterKey = localStorage.getItem('masterKey');
-    if (storedMasterKey) {
-      setMasterKey(storedMasterKey);
-      fetchEntries();
-    } else {
-      setShowMasterKeyDialog(true);
-      setLoading(false);
+    if (token) {
+      const storedMasterKey = localStorage.getItem('masterKey');
+      if (storedMasterKey) {
+        setMasterKey(storedMasterKey);
+        fetchEntries();
+      } else {
+        setShowMasterKeyDialog(true);
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredEntries(entries);
-    } else {
+    let currentFilteredEntries = entries;
+
+    if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      setFilteredEntries(
-        entries.filter(
-          (entry) =>
-            entry.title.toLowerCase().includes(query) ||
-            entry.username.toLowerCase().includes(query) ||
-            entry.url.toLowerCase().includes(query)
-        )
+      currentFilteredEntries = currentFilteredEntries.filter(
+        (entry) =>
+          entry.title.toLowerCase().includes(query) ||
+          entry.username.toLowerCase().includes(query) ||
+          entry.url.toLowerCase().includes(query)
       );
     }
-  }, [searchQuery, entries]);
+
+    if (selectedTags.length > 0) {
+      currentFilteredEntries = currentFilteredEntries.filter((entry) =>
+        selectedTags.every((tag) => entry.tags?.includes(tag))
+      );
+    }
+
+    setFilteredEntries(currentFilteredEntries);
+  }, [searchQuery, entries, selectedTags]);
 
   const fetchEntries = async () => {
     try {
@@ -73,11 +92,20 @@ export default function DashboardPage() {
         },
       });
 
-      if (!response.ok) throw new Error('Failed to fetch entries');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(`Failed to fetch entries: ${response.status} ${response.statusText} - ${errorData.message}`);
+      }
 
       const data = await response.json();
       setEntries(data.entries);
       setFilteredEntries(data.entries);
+
+      const allTags = new Set<string>();
+      data.entries.forEach((entry: VaultEntry) => {
+        entry.tags?.forEach((tag) => allTags.add(tag));
+      });
+      setAvailableTags(Array.from(allTags));
     } catch (error: any) {
       toast.error(error.message || 'Failed to load vault entries');
     } finally {
@@ -114,6 +142,7 @@ export default function DashboardPage() {
           encrypted_password: encryptedPassword,
           url: data.url,
           notes: data.notes,
+          tags: data.tags,
         }),
       });
 
@@ -145,6 +174,7 @@ export default function DashboardPage() {
           encrypted_password: encryptedPassword,
           url: data.url,
           notes: data.notes,
+          tags: data.tags,
         }),
       });
 
@@ -183,6 +213,111 @@ export default function DashboardPage() {
     } catch (error) {
       return '[Decryption Error]';
     }
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleExportVault = async () => {
+    if (!masterKey) {
+      toast.error('Master key is not set. Please set it to export your vault.');
+      return;
+    }
+
+    try {
+      const encryptionKey = generateEncryptionKey(user!.id, masterKey);
+      const decryptedEntries = entries.map(entry => ({
+        id: entry.id,
+        title: entry.title,
+        username: entry.username,
+        password: decryptText(entry.encrypted_password, encryptionKey),
+        url: entry.url,
+        notes: entry.notes ? decryptText(entry.notes, encryptionKey) : '',
+        tags: entry.tags,
+      }));
+
+      const exportData = {
+        version: 1,
+        timestamp: new Date().toISOString(),
+        entries: decryptedEntries,
+      };
+
+      const encryptedExportData = encryptText(JSON.stringify(exportData), encryptionKey);
+
+      const blob = new Blob([encryptedExportData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `securevault_export_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Vault exported successfully!');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export vault. Make sure your master key is correct.');
+    }
+  };
+
+  const handleImportVault = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!masterKey) {
+      toast.error('Master key is not set. Please set it to import your vault.');
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) {
+      toast.error('No file selected.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const encryptedData = e.target?.result as string;
+        const encryptionKey = generateEncryptionKey(user!.id, masterKey);
+        const decryptedDataString = decryptText(encryptedData, encryptionKey);
+        const importedData: ExportedVaultData = JSON.parse(decryptedDataString);
+
+        if (importedData.version !== 1 || !Array.isArray(importedData.entries)) {
+          throw new Error('Invalid vault file format.');
+        }
+
+        for (const entry of importedData.entries) {
+          const encryptedPassword = encryptText(entry.password, encryptionKey);
+          const encryptedNotes = entry.notes ? encryptText(entry.notes, encryptionKey) : '';
+
+          await fetch('/api/vault', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              title: entry.title,
+              username: entry.username,
+              encrypted_password: encryptedPassword,
+              url: entry.url,
+              notes: encryptedNotes,
+              tags: entry.tags,
+            }),
+          });
+        }
+
+        toast.success('Vault imported successfully!');
+        setShowImportDialog(false);
+        fetchEntries();
+      } catch (error: any) {
+        console.error('Import failed:', error);
+        toast.error(error.message || 'Failed to import vault. Make sure your master key is correct and the file is valid.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -241,10 +376,26 @@ export default function DashboardPage() {
                   <Shield className="w-4 h-4 mr-2" />
                   2FA Settings
                 </Button>
+                <Button
+                  onClick={handleExportVault}
+                  variant="outline"
+                  className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Vault
+                </Button>
+                <Button
+                  onClick={() => setShowImportDialog(true)}
+                  variant="outline"
+                  className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Vault
+                </Button>
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative mb-4">
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search by title, username, or URL..."
@@ -253,6 +404,27 @@ export default function DashboardPage() {
                 className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
+
+            {availableTags.length > 0 && (
+              <div className="mb-6">
+                <p className="text-slate-400 text-sm mb-2">Filter by Tags:</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableTags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className={`cursor-pointer ${selectedTags.includes(tag)
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                      onClick={() => handleTagClick(tag)}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {loading ? (
@@ -267,14 +439,14 @@ export default function DashboardPage() {
             >
               <Key className="w-16 h-16 text-slate-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
-                {searchQuery ? 'No entries found' : 'Your vault is empty'}
+                {searchQuery || selectedTags.length > 0 ? 'No entries found' : 'Your vault is empty'}
               </h3>
               <p className="text-slate-400 mb-6">
-                {searchQuery
-                  ? 'Try a different search term'
+                {searchQuery || selectedTags.length > 0
+                  ? 'Try a different search term or clear tag filters'
                   : 'Start by adding your first password entry'}
               </p>
-              {!searchQuery && (
+              {!(searchQuery || selectedTags.length > 0) && (
                 <Button
                   onClick={() => setShowForm(true)}
                   className="bg-blue-600 hover:bg-blue-700"
@@ -319,6 +491,7 @@ export default function DashboardPage() {
                   password: decryptPassword(editingEntry.encrypted_password),
                   url: editingEntry.url,
                   notes: editingEntry.notes,
+                  tags: editingEntry.tags,
                 }
               : undefined
           }
@@ -367,6 +540,32 @@ export default function DashboardPage() {
               >
                 Set Master Key
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <DialogContent className="bg-slate-800 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Import Vault
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Upload your encrypted vault file (.json) to import entries.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                id="importFile"
+                type="file"
+                accept=".json"
+                onChange={handleImportVault}
+                className="bg-slate-900/50 border-slate-600 text-white file:text-white file:bg-blue-600 hover:file:bg-blue-700"
+              />
+              <p className="text-sm text-slate-400">
+                Note: Existing entries with the same ID might be overwritten or duplicated.
+              </p>
             </div>
           </DialogContent>
         </Dialog>

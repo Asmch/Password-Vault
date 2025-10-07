@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Lock, Globe, User, FileText } from 'lucide-react';
+import { Lock, Globe, User, FileText, Eye, EyeOff } from 'lucide-react';
 import PasswordGenerator from './PasswordGenerator';
 
 interface VaultEntryFormProps {
@@ -24,6 +24,7 @@ export interface VaultEntryData {
   password: string;
   url: string;
   notes: string;
+  tags: string[];
 }
 
 export default function VaultEntryForm({
@@ -39,9 +40,11 @@ export default function VaultEntryForm({
     password: '',
     url: '',
     notes: '',
+    tags: [],
   });
   const [loading, setLoading] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // New state for password visibility
 
   useEffect(() => {
     if (initialData) {
@@ -53,6 +56,7 @@ export default function VaultEntryForm({
         password: '',
         url: '',
         notes: '',
+        tags: [],
       });
     }
   }, [initialData, open]);
@@ -75,6 +79,7 @@ export default function VaultEntryForm({
         password: '',
         url: '',
         notes: '',
+        tags: [],
       });
     } catch (error) {
       console.error('Form submission error:', error);
@@ -151,13 +156,22 @@ export default function VaultEntryForm({
               <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'} // Dynamically change type
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
-                className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                className="pl-10 pr-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500" // Added pr-10 for icon space
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-0 top-0 h-full px-3 text-slate-400 hover:text-white"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
             </div>
           </div>
 
@@ -194,6 +208,21 @@ export default function VaultEntryForm({
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
+              className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tags" className="text-slate-200">
+              Tags (comma-separated)
+            </Label>
+            <Input
+              id="tags"
+              placeholder="e.g., work, personal, social"
+              value={formData.tags.join(', ')}
+              onChange={(e) =>
+                setFormData({ ...formData, tags: e.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) })
+              }
               className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
             />
           </div>

@@ -62,8 +62,10 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
       toast.success('Password copied to clipboard!');
 
       setTimeout(async () => {
-        await navigator.clipboard.writeText('');
-        toast.info('Clipboard cleared for security');
+        if (typeof document !== 'undefined' && document.hasFocus()) {
+          await navigator.clipboard.writeText('');
+          toast.info('Clipboard cleared for security');
+        }
       }, 15000);
     } catch (error) {
       toast.error('Failed to copy password');

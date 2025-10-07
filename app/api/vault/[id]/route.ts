@@ -4,6 +4,54 @@ import VaultEntry from '@/models/VaultEntry';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 import mongoose from 'mongoose';
 
+interface Params {
+  id: string;
+}
+
+// API to get a single vault entry by ID
+async function handleGET(
+  req: AuthenticatedRequest,
+  { params }: { params: Params }
+) {
+  try {
+    await connectDB();
+    const userId = req.user!.userId;
+    const { id } = params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid entry ID' },
+        { status: 400 }
+      );
+    }
+
+    const entry = await VaultEntry.findOne({ _id: id, user_id: userId }).lean();
+
+    if (!entry) {
+      return NextResponse.json({ error: 'Vault entry not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      entry: {
+        id: String(entry._id),
+        title: entry.title,
+        username: entry.username,
+        encrypted_password: entry.encrypted_password,
+        url: entry.url,
+        notes: entry.notes,
+        tags: entry.tags || [],
+        created_at: entry.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Vault GET by ID error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 async function handlePUT(
   req: AuthenticatedRequest,
   { params }: { params: { id: string } }
@@ -12,7 +60,7 @@ async function handlePUT(
     await connectDB();
     const userId = req.user!.userId;
     const { id } = params;
-    const { title, username, encrypted_password, url, notes } = await req.json();
+    const { title, username, encrypted_password, url, notes, tags } = await req.json();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -35,13 +83,7 @@ async function handlePUT(
 
     const updatedEntry = await VaultEntry.findOneAndUpdate(
       { _id: id, user_id: userId },
-      {
-        title,
-        username,
-        encrypted_password,
-        url: url || '',
-        notes: notes || '',
-      },
+      { title, username, encrypted_password, url: url || '', notes: notes || '', tags: tags || [] },
       { new: true }
     );
 
@@ -110,5 +152,6 @@ async function handleDELETE(
   }
 }
 
+export const GET = withAuth(handleGET);
 export const PUT = withAuth(handlePUT);
 export const DELETE = withAuth(handleDELETE);

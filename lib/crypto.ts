@@ -5,8 +5,17 @@ export const encryptText = (text: string, secret: string): string => {
 };
 
 export const decryptText = (ciphertext: string, secret: string): string => {
-  const bytes = CryptoJS.AES.decrypt(ciphertext, secret);
-  return bytes.toString(CryptoJS.enc.Utf8);
+  try {
+    const bytes = CryptoJS.AES.decrypt(ciphertext, secret);
+    const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+    if (!decryptedText) {
+      throw new Error('Failed to decrypt or empty result. Check your encryption key.');
+    }
+    return decryptedText;
+  } catch (error) {
+    console.error('Decryption error:', error);
+    throw new Error('Failed to decrypt data. Ensure the encryption key is correct.');
+  }
 };
 
 export const generateEncryptionKey = (userId: string, masterKey: string): string => {

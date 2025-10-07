@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 
 interface VaultEntry {
   id: string;
@@ -25,6 +26,7 @@ interface VaultEntry {
   url: string;
   notes: string;
   created_at: string;
+  tags: string[];
 }
 
 interface VaultEntryCardProps {
@@ -77,7 +79,7 @@ export default function VaultEntryCard({
                     href={entry.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1 break-all"
                   >
                     {entry.url}
                     <ExternalLink className="w-3 h-3" />
@@ -163,6 +165,19 @@ export default function VaultEntryCard({
                 <div className="p-3 bg-slate-900/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">Notes</p>
                   <p className="text-sm text-slate-300 whitespace-pre-wrap">{entry.notes}</p>
+                </div>
+              )}
+
+              {entry.tags && entry.tags.length > 0 && (
+                <div className="p-3 bg-slate-900/50 rounded-lg">
+                  <p className="text-xs text-slate-400 mb-1">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {entry.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="bg-blue-600/20 text-blue-300 hover:bg-blue-600/30">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
