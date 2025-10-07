@@ -1,22 +1,30 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import connectDB from '@/lib/mongodb';
+import VaultEntry from '@/models/VaultEntry';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
+import mongoose from 'mongoose';
 
 async function handlePUT(
   req: AuthenticatedRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectDB();
     const userId = req.user!.userId;
     const { id } = params;
     const { title, username, encrypted_password, url, notes } = await req.json();
 
-    const { data: existingEntry } = await supabase
-      .from('vault_entries')
-      .select('id')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .maybeSingle();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid entry ID' },
+        { status: 400 }
+      );
+    }
+
+    const existingEntry = await VaultEntry.findOne({
+      _id: id,
+      user_id: userId,
+    });
 
     if (!existingEntry) {
       return NextResponse.json(
@@ -25,29 +33,36 @@ async function handlePUT(
       );
     }
 
-    const { data: updatedEntry, error } = await supabase
-      .from('vault_entries')
-      .update({
+    const updatedEntry = await VaultEntry.findOneAndUpdate(
+      { _id: id, user_id: userId },
+      {
         title,
         username,
         encrypted_password,
         url: url || '',
         notes: notes || '',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-      .single();
+      },
+      { new: true }
+    );
 
-    if (error || !updatedEntry) {
+    if (!updatedEntry) {
       return NextResponse.json(
         { error: 'Failed to update vault entry' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ entry: updatedEntry });
+    return NextResponse.json({
+      entry: {
+        id: String(updatedEntry._id),
+        title: updatedEntry.title,
+        username: updatedEntry.username,
+        encrypted_password: updatedEntry.encrypted_password,
+        url: updatedEntry.url,
+        notes: updatedEntry.notes,
+        created_at: updatedEntry.createdAt,
+      },
+    });
   } catch (error) {
     console.error('Vault PUT error:', error);
     return NextResponse.json(
@@ -62,19 +77,26 @@ async function handleDELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectDB();
     const userId = req.user!.userId;
     const { id } = params;
 
-    const { error } = await supabase
-      .from('vault_entries')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
-
-    if (error) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: 'Failed to delete vault entry' },
-        { status: 500 }
+        { error: 'Invalid entry ID' },
+        { status: 400 }
+      );
+    }
+
+    const result = await VaultEntry.findOneAndDelete({
+      _id: id,
+      user_id: userId,
+    });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Vault entry not found' },
+        { status: 404 }
       );
     }
 

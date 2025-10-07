@@ -13,6 +13,7 @@ import { encryptText, decryptText, generateEncryptionKey } from '@/lib/crypto';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import TwoFactorAuthSettings from '@/components/TwoFactorAuthSettings';
 
 interface VaultEntry {
   id: string;
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [editingEntry, setEditingEntry] = useState<VaultEntry | null>(null);
   const [masterKey, setMasterKey] = useState('');
   const [showMasterKeyDialog, setShowMasterKeyDialog] = useState(false);
+  const [showTwoFactorSettings, setShowTwoFactorSettings] = useState(false);
   const [tempMasterKey, setTempMasterKey] = useState('');
 
   useEffect(() => {
@@ -223,13 +225,23 @@ export default function DashboardPage() {
                   {entries.length} {entries.length === 1 ? 'entry' : 'entries'} stored securely
                 </p>
               </div>
-              <Button
-                onClick={() => setShowForm(true)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Entry
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Entry
+                </Button>
+                <Button
+                  onClick={() => setShowTwoFactorSettings(true)}
+                  variant="outline"
+                  className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  2FA Settings
+                </Button>
+              </div>
             </div>
 
             <div className="relative">
@@ -312,6 +324,12 @@ export default function DashboardPage() {
           }
           mode={editingEntry ? 'edit' : 'create'}
         />
+
+        <Dialog open={showTwoFactorSettings} onOpenChange={setShowTwoFactorSettings}>
+          <DialogContent className="bg-slate-800 border-slate-700">
+            <TwoFactorAuthSettings />
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={showMasterKeyDialog} onOpenChange={() => {}}>
           <DialogContent

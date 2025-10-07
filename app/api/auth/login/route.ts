@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { supabase } from '@/lib/supabase';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
 import { signToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
@@ -14,11 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
+    const user = await User.findOne({ email });
 
     if (!user) {
       return NextResponse.json(
@@ -37,14 +36,14 @@ export async function POST(request: NextRequest) {
     }
 
     const token = signToken({
-      userId: user.id,
+      userId: String(user._id),
       email: user.email,
     });
 
     return NextResponse.json({
       token,
       user: {
-        id: user.id,
+        id: String(user._id),
         email: user.email,
       },
     });

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { supabase } from '@/lib/supabase';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
 import { signToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
@@ -21,11 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    const existingUser = await User.findOne({ email });
 
     if (existingUser) {
       return NextResponse.json(
@@ -36,26 +35,13 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert([
-        {
-          email,
-          password_hash: passwordHash,
-        },
-      ])
-      .select()
-      .single();
-
-    if (insertError || !newUser) {
-      return NextResponse.json(
-        { error: 'Failed to create user' },
-        { status: 500 }
-      );
-    }
+    const newUser = await User.create({
+      email,
+      password_hash: passwordHash,
+    });
 
     const token = signToken({
-      userId: newUser.id,
+      userId: String(newUser._id),
       email: newUser.email,
     });
 
@@ -63,7 +49,7 @@ export async function POST(request: NextRequest) {
       {
         token,
         user: {
-          id: newUser.id,
+          id: String(newUser._id),
           email: newUser.email,
         },
       },

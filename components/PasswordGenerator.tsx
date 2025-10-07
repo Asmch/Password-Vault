@@ -21,6 +21,7 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
   const [includeLowercase, setIncludeLowercase] = useState(true);
   const [includeNumbers, setIncludeNumbers] = useState(true);
   const [includeSymbols, setIncludeSymbols] = useState(true);
+  const [excludeLookAlikes, setExcludeLookAlikes] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const generatePassword = () => {
@@ -29,6 +30,11 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
     if (includeLowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
     if (includeNumbers) charset += '0123456789';
     if (includeSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+    if (excludeLookAlikes) {
+      const lookAlikes = '0O1lI'; // Define common look-alike characters
+      charset = charset.split('').filter(char => !lookAlikes.includes(char)).join('');
+    }
 
     if (charset === '') {
       toast.error('Please select at least one character type');
@@ -193,6 +199,17 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
                 id="symbols"
                 checked={includeSymbols}
                 onCheckedChange={setIncludeSymbols}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lookalikes" className="text-slate-200">
+                Exclude Look-alikes (e.g., O, 0, I, l)
+              </Label>
+              <Switch
+                id="lookalikes"
+                checked={excludeLookAlikes}
+                onCheckedChange={setExcludeLookAlikes}
               />
             </div>
           </div>

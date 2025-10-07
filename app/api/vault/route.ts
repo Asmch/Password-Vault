@@ -1,25 +1,29 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import connectDB from '@/lib/mongodb';
+import VaultEntry from '@/models/VaultEntry';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 
 async function handleGET(req: AuthenticatedRequest) {
   try {
+    await connectDB();
     const userId = req.user!.userId;
 
-    const { data: entries, error } = await supabase
-      .from('vault_entries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const entries = await VaultEntry.find({ user_id: userId })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    if (error) {
-      return NextResponse.json(
-        { error: 'Failed to fetch vault entries' },
-        { status: 500 }
-      );
-    }
+    const formattedEntries = entries.map((entry: any) => ({
+      id: String(entry._id),
+      title: entry.title,
+      username: entry.username,
+      encrypted_password: entry.encrypted_password,
+      url: entry.url,
+      notes: entry.notes,
+      tags: entry.tags || [],
+      created_at: entry.createdAt,
+    }));
 
-    return NextResponse.json({ entries: entries || [] });
+    return NextResponse.json({ entries: formattedEntries });
   } catch (error) {
     console.error('Vault GET error:', error);
     return NextResponse.json(
@@ -31,8 +35,9 @@ async function handleGET(req: AuthenticatedRequest) {
 
 async function handlePOST(req: AuthenticatedRequest) {
   try {
+    await connectDB();
     const userId = req.user!.userId;
-    const { title, username, encrypted_password, url, notes } = await req.json();
+    const { title, username, encrypted_password, url, notes, tags } = await req.json();
 
     if (!title || !username || !encrypted_password) {
       return NextResponse.json(
@@ -41,29 +46,30 @@ async function handlePOST(req: AuthenticatedRequest) {
       );
     }
 
-    const { data: newEntry, error } = await supabase
-      .from('vault_entries')
-      .insert([
-        {
-          user_id: userId,
-          title,
-          username,
-          encrypted_password,
-          url: url || '',
-          notes: notes || '',
+    const newEntry = await VaultEntry.create({
+      user_id: userId,
+      title,
+      username,
+      encrypted_password,
+      url: url || '',
+      notes: notes || '',
+      tags: tags || [],
+    });
+
+    return NextResponse.json(
+      {
+        entry: {
+          id: String(newEntry._id),
+          title: newEntry.title,
+          username: newEntry.username,
+          encrypted_password: newEntry.encrypted_password,
+          url: newEntry.url,
+          notes: newEntry.notes,
+          created_at: newEntry.createdAt,
         },
-      ])
-      .select()
-      .single();
-
-    if (error || !newEntry) {
-      return NextResponse.json(
-        { error: 'Failed to create vault entry' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ entry: newEntry }, { status: 201 });
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Vault POST error:', error);
     return NextResponse.json(
