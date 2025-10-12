@@ -1,6 +1,7 @@
 # Password-Vault
 
 A secure password management application built with Next.js.
+Live Link:- https://password-vault-murex.vercel.app/
 
 ## How to Run
 
