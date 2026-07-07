@@ -48,6 +48,7 @@ export default function VaultEntryForm({
   const [showPassword, setShowPassword] = useState(false);
   const [breachCount, setBreachCount] = useState<number | null>(null);
   const [isCheckingBreach, setIsCheckingBreach] = useState(false);
+  const [tagsInput, setTagsInput] = useState('');
 
   // Debounced HIBP Breach Check
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function VaultEntryForm({
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      setTagsInput(initialData.tags?.join(', ') || '');
     } else {
       setFormData({
         title: '',
@@ -85,6 +87,7 @@ export default function VaultEntryForm({
         notes: '',
         tags: [],
       });
+      setTagsInput('');
     }
   }, [initialData, open]);
 
@@ -117,6 +120,7 @@ export default function VaultEntryForm({
         notes: '',
         tags: [],
       });
+      setTagsInput('');
     } catch (error: any) {
       console.error('Form submission error:', error);
       toast.error(error.message || 'Failed to save entry. Please check your connection and try again.');
@@ -275,10 +279,11 @@ export default function VaultEntryForm({
             <Input
               id="tags"
               placeholder="e.g., work, personal, social"
-              value={formData.tags.join(', ')}
-              onChange={(e) =>
-                setFormData({ ...formData, tags: e.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) })
-              }
+              value={tagsInput}
+              onChange={(e) => {
+                setTagsInput(e.target.value);
+                setFormData({ ...formData, tags: e.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) });
+              }}
               className="bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
             />
           </div>

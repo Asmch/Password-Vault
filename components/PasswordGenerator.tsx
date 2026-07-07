@@ -140,11 +140,12 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={generatePassword} className="flex-1 bg-blue-600 hover:bg-blue-700">
+            <Button type="button" onClick={generatePassword} className="flex-1 bg-blue-600 hover:bg-blue-700">
               <RefreshCw className="w-4 h-4 mr-2" />
               Generate
             </Button>
             <Button
+              type="button"
               onClick={copyToClipboard}
               variant="outline"
               disabled={!password}
@@ -153,6 +154,7 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
             </Button>
             {onUsePassword && (
               <Button
+                type="button"
                 onClick={handleUsePassword}
                 variant="outline"
               >
