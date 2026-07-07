@@ -44,41 +44,42 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 blur-[100px] rounded-full pointer-events-none" />
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 mb-4"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
+            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-4 ring-1 ring-primary/20"
           >
-            <Shield className="w-8 h-8 text-white" />
+            <Shield className="w-7 h-7" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2">SecureVault</h1>
-          <p className="text-slate-400">Your passwords, encrypted and secure</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2">SecureVault</h1>
+          <p className="text-muted-foreground text-sm">Your passwords, encrypted and secure</p>
         </div>
 
-        <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="text-white">Create Account</CardTitle>
-            <CardDescription className="text-slate-400">
+        <Card className="glass-panel border-white/5 relative z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          <CardHeader className="space-y-1 pb-6 relative z-10">
+            <CardTitle className="text-xl font-semibold">Create Account</CardTitle>
+            <CardDescription className="text-sm">
               Start securing your passwords today
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="relative z-10">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-200">
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Label htmlFor="email">Email</Label>
+                <div className="relative group">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                   <Input
                     id="email"
                     type="email"
@@ -86,17 +87,15 @@ export default function RegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className="pl-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-200">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Label htmlFor="password">Password</Label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                   <Input
                     id="password"
                     type="password"
@@ -104,20 +103,18 @@ export default function RegisterPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className="pl-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
                   />
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Must be at least 8 characters
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-slate-200">
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                   <Input
                     id="confirmPassword"
                     type="password"
@@ -125,23 +122,23 @@ export default function RegisterPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className="pl-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
                   />
                 </div>
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full font-medium glass-button"
                 disabled={loading}
               >
                 {loading ? 'Creating account...' : 'Create Account'}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-slate-400">
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               Already have an account?{' '}
-              <Link href="/login" className="text-blue-400 hover:text-blue-300">
+              <Link href="/login" className="text-primary hover:text-primary/80 font-medium transition-colors hover:underline underline-offset-4">
                 Sign in
               </Link>
             </div>

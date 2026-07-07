@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Lock, Globe, User, FileText, Eye, EyeOff } from 'lucide-react';
+import { Lock, Globe, User, FileText, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import PasswordGenerator from './PasswordGenerator';
+import { checkPasswordBreach } from '@/lib/hibp';
 
 interface VaultEntryFormProps {
   open: boolean;
@@ -44,7 +45,33 @@ export default function VaultEntryForm({
   });
   const [loading, setLoading] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New state for password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [breachCount, setBreachCount] = useState<number | null>(null);
+  const [isCheckingBreach, setIsCheckingBreach] = useState(false);
+
+  // Debounced HIBP Breach Check
+  useEffect(() => {
+    const password = formData.password;
+    if (password.length < 8) {
+      setBreachCount(null);
+      setIsCheckingBreach(false);
+      return;
+    }
+
+    setIsCheckingBreach(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const count = await checkPasswordBreach(password);
+        setBreachCount(count);
+      } catch (e) {
+        setBreachCount(-1); // -1 indicates network failure
+      } finally {
+        setIsCheckingBreach(false);
+      }
+    }, 600); // 600ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.password]);
 
   useEffect(() => {
     if (initialData) {
@@ -69,6 +96,15 @@ export default function VaultEntryForm({
       return;
     }
 
+    if (formData.url) {
+      try {
+        new URL(formData.url);
+      } catch (e) {
+        toast.error('Please enter a valid URL (e.g., https://example.com)');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       await onSubmit(formData);
@@ -81,8 +117,9 @@ export default function VaultEntryForm({
         notes: '',
         tags: [],
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Form submission error:', error);
+      toast.error(error.message || 'Failed to save entry. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -90,56 +127,56 @@ export default function VaultEntryForm({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-800 border-slate-700 text-white">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-panel border-white/10 text-foreground shadow-2xl">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-xl">
             {mode === 'create' ? 'Add New Entry' : 'Edit Entry'}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-muted-foreground">
             {mode === 'create'
               ? 'Create a new password entry in your vault'
               : 'Update your vault entry'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-slate-200">
+            <Label htmlFor="title">
               Title *
             </Label>
             <div className="relative">
-              <FileText className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="title"
                 placeholder="e.g., Gmail, Netflix, GitHub"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                className="pl-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-slate-200">
+            <Label htmlFor="username">
               Username / Email *
             </Label>
             <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="username"
                 placeholder="username or email"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
-                className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                className="pl-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-slate-200">
+              <Label htmlFor="password">
                 Password *
               </Label>
               <Button
@@ -147,32 +184,51 @@ export default function VaultEntryForm({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowGenerator(!showGenerator)}
-                className="text-blue-400 hover:text-blue-300"
+                className="text-primary hover:text-primary/80 h-auto py-1"
               >
                 {showGenerator ? 'Hide Generator' : 'Show Generator'}
               </Button>
             </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="password"
-                type={showPassword ? 'text' : 'password'} // Dynamically change type
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
-                className="pl-10 pr-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500" // Added pr-10 for icon space
+                className="pl-10 pr-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
               />
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-0 top-0 h-full px-3 text-slate-400 hover:text-white"
+                className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
             </div>
+            {isCheckingBreach && (
+              <p className="text-xs text-muted-foreground mt-1 animate-pulse">Checking password security...</p>
+            )}
+            {breachCount !== null && !isCheckingBreach && (
+              <div className="mt-1">
+                {breachCount > 0 && (
+                  <p className="text-xs font-medium text-destructive flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Warning: This password has appeared in {breachCount.toLocaleString()} data breaches. Consider changing it.
+                  </p>
+                )}
+                {breachCount === -1 && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                    Couldn't verify breach status (network issue).
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {showGenerator && (
@@ -182,24 +238,24 @@ export default function VaultEntryForm({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="url" className="text-slate-200">
+            <Label htmlFor="url">
               Website URL
             </Label>
             <div className="relative">
-              <Globe className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="url"
                 type="url"
                 placeholder="https://example.com"
                 value={formData.url}
                 onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                className="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                className="pl-10 bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes" className="text-slate-200">
+            <Label htmlFor="notes">
               Notes
             </Label>
             <Textarea
@@ -208,12 +264,12 @@ export default function VaultEntryForm({
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
-              className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+              className="bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all resize-none"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags" className="text-slate-200">
+            <Label htmlFor="tags">
               Tags (comma-separated)
             </Label>
             <Input
@@ -223,14 +279,14 @@ export default function VaultEntryForm({
               onChange={(e) =>
                 setFormData({ ...formData, tags: e.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) })
               }
-              className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+              className="bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-3 pt-4">
             <Button
               type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
+              className="flex-1 font-medium glass-button"
               disabled={loading}
             >
               {loading ? 'Saving...' : mode === 'create' ? 'Create Entry' : 'Update Entry'}
@@ -239,7 +295,7 @@ export default function VaultEntryForm({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+              className="flex-1 font-medium"
             >
               Cancel
             </Button>

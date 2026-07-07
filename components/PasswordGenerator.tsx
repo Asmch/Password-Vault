@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Copy, RefreshCw, Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +24,15 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
   const [includeSymbols, setIncludeSymbols] = useState(true);
   const [excludeLookAlikes, setExcludeLookAlikes] = useState(false);
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const generatePassword = () => {
     let charset = '';
@@ -61,11 +71,20 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
       setCopied(true);
       toast.success('Password copied to clipboard!');
 
-      setTimeout(async () => {
-        if (typeof document !== 'undefined' && document.hasFocus()) {
-          await navigator.clipboard.writeText('');
-          toast.info('Clipboard cleared for security');
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(async () => {
+        try {
+          if (typeof document !== 'undefined' && document.hasFocus()) {
+            await navigator.clipboard.writeText('');
+            toast.info('Clipboard cleared for security');
+          }
+        } catch (e) {
+          // ignore
         }
+        setCopied(false);
       }, 15000);
     } catch (error) {
       toast.error('Failed to copy password');
@@ -128,15 +147,14 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
             <Button
               onClick={copyToClipboard}
               variant="outline"
-              className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+              disabled={!password}
             >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
             </Button>
             {onUsePassword && (
               <Button
                 onClick={handleUsePassword}
                 variant="outline"
-                className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
               >
                 Use
               </Button>
@@ -144,75 +162,50 @@ export default function PasswordGenerator({ onUsePassword }: PasswordGeneratorPr
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-slate-200">Length: {length}</Label>
-            </div>
-            <Slider
-              value={[length]}
-              onValueChange={(value) => setLength(value[0])}
-              min={8}
-              max={32}
-              step={1}
-              className="w-full"
-            />
+        <div className="space-y-4 p-4 bg-muted/30 rounded-xl border border-border/50">
+          <div className="flex items-center justify-between mb-4">
+            <Label className="text-sm font-medium">Length</Label>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {length} chars
+            </span>
           </div>
+          <Slider
+            value={[length]}
+            onValueChange={(value) => setLength(value[0])}
+            min={8}
+            max={32}
+            step={1}
+            className="w-full"
+          />
 
-          <div className="space-y-3">
+          <div className="space-y-3 pt-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="uppercase" className="text-slate-200">
-                Uppercase Letters
-              </Label>
-              <Switch
-                id="uppercase"
-                checked={includeUppercase}
-                onCheckedChange={setIncludeUppercase}
-              />
+              <Label htmlFor="uppercase" className="text-sm">Uppercase Letters</Label>
+              <Switch id="uppercase" checked={includeUppercase} onCheckedChange={setIncludeUppercase} />
             </div>
 
             <div className="flex items-center justify-between">
-              <Label htmlFor="lowercase" className="text-slate-200">
-                Lowercase Letters
-              </Label>
-              <Switch
-                id="lowercase"
-                checked={includeLowercase}
-                onCheckedChange={setIncludeLowercase}
-              />
+              <Label htmlFor="lowercase" className="text-sm">Lowercase Letters</Label>
+              <Switch id="lowercase" checked={includeLowercase} onCheckedChange={setIncludeLowercase} />
             </div>
 
             <div className="flex items-center justify-between">
-              <Label htmlFor="numbers" className="text-slate-200">
-                Numbers
-              </Label>
-              <Switch
-                id="numbers"
-                checked={includeNumbers}
-                onCheckedChange={setIncludeNumbers}
-              />
+              <Label htmlFor="numbers" className="text-sm">Numbers</Label>
+              <Switch id="numbers" checked={includeNumbers} onCheckedChange={setIncludeNumbers} />
             </div>
 
             <div className="flex items-center justify-between">
-              <Label htmlFor="symbols" className="text-slate-200">
-                Symbols
-              </Label>
-              <Switch
-                id="symbols"
-                checked={includeSymbols}
-                onCheckedChange={setIncludeSymbols}
-              />
+              <Label htmlFor="symbols" className="text-xs cursor-pointer">Symbols (!@#)</Label>
+              <Switch id="symbols" checked={includeSymbols} onCheckedChange={setIncludeSymbols} />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="lookalikes" className="text-slate-200">
-                Exclude Look-alikes (e.g., O, 0, I, l)
-              </Label>
-              <Switch
-                id="lookalikes"
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="excludeLookAlikes"
                 checked={excludeLookAlikes}
-                onCheckedChange={setExcludeLookAlikes}
+                onCheckedChange={(checked: boolean | "indeterminate") => setExcludeLookAlikes(checked === true)}
               />
+              <Label htmlFor="excludeLookAlikes" className="text-xs cursor-pointer">No Ambiguous (0O1lI)</Label>
             </div>
           </div>
         </div>

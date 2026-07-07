@@ -1,14 +1,14 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Outfit } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/sonner';
 
-const inter = Inter({ subsets: ['latin'] });
+const outfit = Outfit({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'SecureVault - Password Manager',
-  description: 'Secure password management with client-side encryption',
+  title: 'SecureVault - Premium Password Manager',
+  description: 'Secure password management with client-side encryption, wrapped in a beautiful interface',
 };
 
 export default function RootLayout({
@@ -17,8 +17,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning className="dark">
+      <body className={`${outfit.className} relative min-h-screen`}>
+        {/* Global Mesh Background */}
+        <div className="mesh-bg"></div>
         <AuthProvider>
           {children}
           <Toaster />

@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from '@/components/ui/label';
 import TwoFactorAuthSettings from '@/components/TwoFactorAuthSettings';
 import { Badge } from '@/components/ui/badge';
+import { useInactivityTimer } from '@/hooks/useInactivityTimer';
+import { useCallback } from 'react';
 
 interface VaultEntry {
   id: string;
@@ -61,6 +63,24 @@ export default function DashboardPage() {
       }
     }
   }, [token]);
+
+  const handleIdle = useCallback(() => {
+    setMasterKey('');
+    localStorage.removeItem('masterKey');
+    setShowForm(false);
+    setEditingEntry(null);
+    setShowImportDialog(false);
+    setShowTwoFactorSettings(false);
+    setTempMasterKey('');
+    setShowMasterKeyDialog(true);
+    toast.info('Vault locked due to inactivity.', { duration: 5000 });
+  }, []);
+
+  useInactivityTimer({
+    timeoutMs: 5 * 60 * 1000,
+    onIdle: handleIdle,
+    isActive: !!masterKey && !showMasterKeyDialog,
+  });
 
   useEffect(() => {
     let currentFilteredEntries = entries;
@@ -322,30 +342,31 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <nav className="border-b border-slate-700 bg-slate-800/50 backdrop-blur">
-          <div className="container mx-auto px-4 py-4">
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="pt-6 px-4 mb-4 z-40 relative">
+          <nav className="glass-panel max-w-4xl mx-auto rounded-full px-6 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.2)] relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <Shield className="w-5 h-5 text-primary relative z-10" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white">SecureVault</h1>
-                  <p className="text-xs text-slate-400">{user?.email}</p>
+                  <h1 className="text-xl font-bold tracking-tight text-white">SecureVault</h1>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
               <Button
                 onClick={logout}
                 variant="ghost"
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-white hover:bg-white/5 rounded-full px-4"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
             </div>
-          </div>
-        </nav>
+          </nav>
+        </div>
 
         <div className="container mx-auto px-4 py-8">
           <motion.div
@@ -353,17 +374,17 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Your Vault</h2>
-                <p className="text-slate-400">
-                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'} stored securely
+                <h2 className="text-2xl font-semibold tracking-tight mb-1">Your Vault</h2>
+                <p className="text-muted-foreground text-sm">
+                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'} encrypted & stored securely
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={() => setShowForm(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="font-medium glass-button rounded-full px-6"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Entry
@@ -371,15 +392,18 @@ export default function DashboardPage() {
                 <Button
                   onClick={() => setShowTwoFactorSettings(true)}
                   variant="outline"
-                  className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+                  className="font-medium relative"
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   2FA Settings
+                  {user?.two_factor_enabled && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></span>
+                  )}
                 </Button>
                 <Button
                   onClick={handleExportVault}
                   variant="outline"
-                  className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+                  className="font-medium"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Export Vault
@@ -387,7 +411,7 @@ export default function DashboardPage() {
                 <Button
                   onClick={() => setShowImportDialog(true)}
                   variant="outline"
-                  className="border-slate-600 bg-slate-900/50 text-white hover:bg-slate-700"
+                  className="font-medium"
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Import Vault
@@ -395,13 +419,13 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by title, username, or URL..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                className="pl-10 bg-input/30 max-w-md"
               />
             </div>
 
@@ -428,34 +452,41 @@ export default function DashboardPage() {
           </motion.div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="flex items-center justify-center py-32">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
             </div>
           ) : filteredEntries.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-24 glass-panel max-w-2xl mx-auto rounded-3xl"
             >
-              <Key className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">
-                {searchQuery || selectedTags.length > 0 ? 'No entries found' : 'Your vault is empty'}
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-1 ring-primary/20 shadow-[0_0_30px_rgba(139,92,246,0.15)] relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Key className="w-10 h-10 text-primary relative z-10" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
+                {searchQuery || selectedTags.length > 0 ? 'No matching entries' : 'Your vault is completely empty'}
               </h3>
-              <p className="text-slate-400 mb-6">
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm">
                 {searchQuery || selectedTags.length > 0
-                  ? 'Try a different search term or clear tag filters'
-                  : 'Start by adding your first password entry'}
+                  ? 'Try adjusting your search or filters.'
+                  : 'Start securing your credentials. All data is encrypted locally before being stored in the database.'}
               </p>
               {!(searchQuery || selectedTags.length > 0) && (
                 <Button
                   onClick={() => setShowForm(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="font-medium glass-button rounded-full mt-4"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Entry
                 </Button>
               )}
             </motion.div>
+          ) : !masterKey ? (
+            <div className="flex items-center justify-center py-20">
+              <p className="text-muted-foreground">Vault is locked.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <AnimatePresence>
@@ -506,46 +537,51 @@ export default function DashboardPage() {
 
         <Dialog open={showMasterKeyDialog} onOpenChange={() => {}}>
           <DialogContent
-            className="bg-slate-800 border-slate-700"
+            className="glass-panel border-white/10 sm:max-w-[425px] text-foreground shadow-2xl"
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                Set Master Encryption Key
+              <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                  <Key className="w-5 h-5" />
+                </div>
+                Unlock Vault
               </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                This key will be used to encrypt all your passwords. Keep it safe and never share it.
-                You'll need it to access your vault.
+              <DialogDescription className="text-muted-foreground pt-2">
+                Enter your Master Key to encrypt and decrypt your vault. 
+                <span className="block mt-2 font-medium text-amber-500/90">
+                  We never store this key. If you lose it, your data cannot be recovered.
+                </span>
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-5 pt-2">
               <div className="space-y-2">
-                <Label htmlFor="masterKey" className="text-slate-200">
+                <Label htmlFor="masterKey">
                   Master Key
                 </Label>
                 <Input
                   id="masterKey"
                   type="password"
-                  placeholder="Enter a strong master key (min 8 characters)"
+                  placeholder="Enter your strong master key"
                   value={tempMasterKey}
                   onChange={(e) => setTempMasterKey(e.target.value)}
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                  className="bg-input/20 border-white/10 focus:border-primary/50 focus:ring-primary/50 transition-all"
+                  autoFocus
                 />
               </div>
               <Button
                 onClick={handleSetMasterKey}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full font-medium glass-button"
               >
-                Set Master Key
+                Unlock Vault
               </Button>
             </div>
           </DialogContent>
         </Dialog>
 
         <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-          <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogContent className="glass-panel border-white/10 text-foreground shadow-2xl">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
                 <Upload className="w-5 h-5" />
@@ -561,7 +597,7 @@ export default function DashboardPage() {
                 type="file"
                 accept=".json"
                 onChange={handleImportVault}
-                className="bg-slate-900/50 border-slate-600 text-white file:text-white file:bg-blue-600 hover:file:bg-blue-700"
+                className="bg-input/20 border-white/10 text-foreground file:text-white file:bg-primary file:border-none file:mr-4 file:px-4 file:py-1 hover:file:bg-primary/80 file:rounded-full file:transition-all"
               />
               <p className="text-sm text-slate-400">
                 Note: Existing entries with the same ID might be overwritten or duplicated.
