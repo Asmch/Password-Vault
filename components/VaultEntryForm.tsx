@@ -131,7 +131,7 @@ export default function VaultEntryForm({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-panel border-white/10 text-foreground shadow-2xl">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto glass-panel border-white/10 text-foreground shadow-2xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-xl">
             {mode === 'create' ? 'Add New Entry' : 'Edit Entry'}
@@ -288,10 +288,10 @@ export default function VaultEntryForm({
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button
               type="submit"
-              className="flex-1 font-medium glass-button"
+              className="flex-1 font-medium glass-button w-full sm:w-auto"
               disabled={loading}
             >
               {loading ? 'Saving...' : mode === 'create' ? 'Create Entry' : 'Update Entry'}
@@ -300,7 +300,7 @@ export default function VaultEntryForm({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1 font-medium"
+              className="flex-1 font-medium w-full sm:w-auto"
             >
               Cancel
             </Button>

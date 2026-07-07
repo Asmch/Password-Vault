@@ -343,26 +343,26 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground">
-        <div className="pt-6 px-4 mb-4 z-40 relative">
-          <nav className="glass-panel max-w-4xl mx-auto rounded-full px-6 py-3">
+        <div className="pt-4 sm:pt-6 px-3 sm:px-4 mb-4 z-40 relative">
+          <nav className="glass-panel max-w-4xl mx-auto rounded-2xl sm:rounded-full px-4 py-3 sm:px-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.2)] relative overflow-hidden group">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-primary/20 shadow-[0_0_15px_rgba(139,92,246,0.2)] relative overflow-hidden group flex-shrink-0">
                   <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <Shield className="w-5 h-5 text-primary relative z-10" />
+                  <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-primary relative z-10" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold tracking-tight text-white">SecureVault</h1>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">SecureVault</h1>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">{user?.email}</p>
                 </div>
               </div>
               <Button
                 onClick={logout}
                 variant="ghost"
-                className="text-muted-foreground hover:text-white hover:bg-white/5 rounded-full px-4"
+                className="text-muted-foreground hover:text-white hover:bg-white/5 rounded-full px-3 sm:px-4 h-9 sm:h-10"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </nav>
@@ -381,10 +381,10 @@ export default function DashboardPage() {
                   {entries.length} {entries.length === 1 ? 'entry' : 'entries'} encrypted & stored securely
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 w-full md:w-auto">
                 <Button
                   onClick={() => setShowForm(true)}
-                  className="font-medium glass-button rounded-full px-6"
+                  className="font-medium glass-button rounded-full sm:px-6 w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Entry
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                 <Button
                   onClick={() => setShowTwoFactorSettings(true)}
                   variant="outline"
-                  className="font-medium relative"
+                  className="font-medium relative w-full sm:w-auto"
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   2FA Settings
@@ -403,7 +403,7 @@ export default function DashboardPage() {
                 <Button
                   onClick={handleExportVault}
                   variant="outline"
-                  className="font-medium"
+                  className="font-medium w-full sm:w-auto"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Export Vault
@@ -411,7 +411,7 @@ export default function DashboardPage() {
                 <Button
                   onClick={() => setShowImportDialog(true)}
                   variant="outline"
-                  className="font-medium"
+                  className="font-medium w-full sm:w-auto"
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Import Vault
@@ -537,7 +537,7 @@ export default function DashboardPage() {
 
         <Dialog open={showMasterKeyDialog} onOpenChange={() => {}}>
           <DialogContent
-            className="glass-panel border-white/10 sm:max-w-[425px] text-foreground shadow-2xl"
+            className="glass-panel border-white/10 sm:max-w-[425px] w-[95vw] sm:w-full p-4 sm:p-6 text-foreground shadow-2xl"
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
@@ -581,7 +581,7 @@ export default function DashboardPage() {
         </Dialog>
 
         <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-          <DialogContent className="glass-panel border-white/10 text-foreground shadow-2xl">
+          <DialogContent className="glass-panel border-white/10 text-foreground shadow-2xl w-[95vw] sm:w-full sm:max-w-md p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
                 <Upload className="w-5 h-5" />
