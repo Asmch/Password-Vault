@@ -2,7 +2,7 @@
 
 SecureVault is a secure, modern password management application built with Next.js, featuring end-to-end encrypted password storage, a tag-based organization system, Two-Factor Authentication (2FA), and integration with "Have I Been Pwned" for enhanced data protection.
 
-![Live Link]https://password-vault-murex.vercel.app/
+Live Link:- https://password-vault-murex.vercel.app/
 
 ## ✨ Key Features
 
