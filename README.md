@@ -14,6 +14,20 @@ Live Link:- https://password-vault-murex.vercel.app/
 - **🏷️ Organization:** Full CRUD operations and tag-based filtering for easily managing large lists of credentials.
 - **🎨 Modern UI/UX:** Built with Tailwind CSS, Framer Motion, and shadcn/ui components for a clean, responsive, and accessible interface.
 
+## 📸 Screenshots
+
+### Dashboard & Organization
+![Dashboard showing vault entries and tags](./Screenshot%202026-07-07%20101230.png)
+
+### Master Key & Client-Side Encryption
+![Unlock Vault dialog asking for Master Key](./Screenshot%202026-07-06%20204431.png)
+
+### Password Generator
+![Password Generator component with customizable options](./Screenshot%202026-07-07%20104732.png)
+
+### Breach Detection in Action
+![Add New Entry form showing Have I Been Pwned warning](./Screenshot%202026-07-07%20101317.png)
+
 ## 🛠️ Tech Stack
 
 - **Framework:** [Next.js 13+](https://nextjs.org/) (App Router)
